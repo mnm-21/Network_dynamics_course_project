@@ -6,13 +6,18 @@ from collections import defaultdict, deque
 import numpy as np
 import matplotlib.pyplot as plt
 
+## TODO implementation of commmunication - must be done once ~5-10*dt. data packet can be implemented as a separate datastructure. 
+## TODO package the code into multiple files, and handle the global variables better. This is required for the experimentation.
+#can implement like a queue in each agent to model the asynchronous manner of communication and delays.
+
+## TODO retraction graphics is not handle properly
 # --------------------------
 # Simulation parameters
 # --------------------------
 AREA_W = 1000.0
 AREA_H = 1000.0
 BASE_POS = np.array([AREA_W / 2.0, 80.0])    # base near bottom center
-USER_POS = np.array([AREA_W / 2.0, AREA_H - 80.0])  # user near top center (fixed for single trial)
+USER_POS = np.array([AREA_W / 2.0, AREA_H - 600.0])  # user near top center (fixed for single trial)
 DT = 0.1                     # simulation step (s)
 TRIAL_DURATION = 900.0       # seconds (15 min) - single trial
 V = 10.0                     # agent speed (m/s)
@@ -25,17 +30,23 @@ LAUNCH_DURATION = 4.0        # seconds spent in LAUNCHING state
 # Pheromone parameters (from paper-ish values)
 PHI_INIT = 0.7
 PHI_MAX = 1.0
-PHI_ANT = 0.01               # per ant "visit" per dt (scaled by dt in code)
+PHI_ANT = 0.0001               # per ant "visit" per dt (scaled by dt in code)
 PHI_CONN = 0.01              # reinforcement for being on least-hop path (per dt)
 PHI_INTERNAL = 0.001
 PHI_DECAY = 0.001            # per dt evaporation (we will scale by dt)
 MU = 0.75                    # exploration constant for Deneubourg model
 EPS = 0.01                   # small tie-breaker in selection
 
+# --------------------------
+# TODO: lattice directions are defined in terms of the user location, which is an unknown. Needs to be defined absolutely. 
+
+
 # Geometry for i,j lattice
 # Choose base orientation: vector pointing from base to user
+## NOTE changed the base dir to an absolute north direction from being user-relative.
 base_to_user = USER_POS - BASE_POS
-base_dir = base_to_user / (np.linalg.norm(base_to_user) + 1e-9)
+north_dir = np.array([0.0, 1.0])
+base_dir = north_dir / (np.linalg.norm(north_dir) + 1e-9)
 # Two lattice basis vectors at +30° (left) and -30° (right) from base_dir
 def rotate(vec, degrees):
     th = math.radians(degrees)
@@ -195,7 +206,7 @@ class Agent:
             # orbit around held node
             if self.held_node is None:
                 # safety: revert to ACTIVE
-                self.state = 'ACTIVE'
+                self.state = 'ACTIVE' ## NOTE held_node is None => pheromone depleted and node removed; shouldnt it become RETRACTING instead
                 self.role = 'ANT'
                 return
             node = node_table[self.held_node]
@@ -215,7 +226,10 @@ class Agent:
             if self.retract_target is None:
                 # find neighbors of current nearest node or nearby nodes within COMM_R
                 # pick the node among node_table keys within COMM_R with highest phi and (i+j) smaller than current ref
+                
                 candidates = []
+                ## TODO candidates are all 4 neighbors, not the 2 in the backward direction
+                ## just implement as (i-1,j) and (i, j-1)??? Why use COMM_R anol?
                 for k, node in node_table.items():
                     if node.exists and np.linalg.norm(node.pos - self.pos) <= COMM_R * 2.0:
                         candidates.append((k, node))
@@ -257,6 +271,7 @@ class Agent:
                     self.heading = math.atan2(vec[1], vec[0])
             else:
                 # target disappeared; reset and try spiral
+                ## NOTE spiralling must be based on t_lost, not this. This also means current implementation is not positionless. 
                 self.retract_target = None
             return
 
@@ -354,6 +369,7 @@ try:
             ag.step_motion(DT, t, node_table)
 
         # detect arrivals: for any ACTIVE ant near its dest that is not yet a node, create node and assign agent as holder
+        ## NOTE why is this not handled in the agent step_motion?
         for ag in agents:
             if ag.state == 'ACTIVE' and ag.dest_ij is not None:
                 dest = ag.dest_ij
@@ -366,6 +382,7 @@ try:
                         new_node.pos = dest_pos
                         new_node.time_created = t
                         new_node.agent_id = ag.id
+                        new_node.phi = PHI_INIT #needs to be redefined here for the case of re-activation of agent after retraction
                         node_table[dest] = new_node
                         created_nodes.add(dest)
                         # agent becomes node holder (circling)
@@ -380,6 +397,7 @@ try:
                         ag.dest_ij = None
                         ag.branch_sign = None
                         # slight pause before selecting next branch
+        
         # pheromone deposition: for each node, count ants in range (ants referencing that node)
         ant_counts = defaultdict(int)
         for ag in agents:
@@ -397,17 +415,33 @@ try:
         min_user_hop = min([node_table[u].hop_to_base for u in user_nodes]) if user_nodes else None
         # apply updates
         for key, node in node_table.items():
-            if not node.exists:
+            if not node.exists or (node.i == 0 and node.j == 0):
                 continue
             # deposit from ants in range
             n_ants = ant_counts.get(key, 0)
-            node.phi += PHI_ANT * n_ants
-            # reinforcement if node is on a route (simple condition: if hop_to_base finite and node is closer to base than some neighbor)
-            if node.hop_to_base < np.inf:
+            node.phi += PHI_ANT * n_ants ## NOTE this is causing the pheromone saturation issue. pheromone saturates as soon as another agent uses the node as reference node. 
+
+            # # reinforcement if node is on a route (simple condition: if hop_to_base finite and node is closer to base than some neighbor)
+            # ## TODO phi_int is implemented wrong. Should be based on the existence of nodes farther from base.
+            # if node.hop_to_base < np.inf:
+            #     node.phi += PHI_INTERNAL
+
+            # reinforcement: increase phi by PHI_INTERNAL only if (i+1, j) or (i, j+1) node exists and is held by an agent
+            i, j = node.i, node.j
+            eligible = False
+            for child_ij in [(i+1, j), (i, j+1)]:
+                if child_ij in node_table:
+                    child_node = node_table[child_ij]
+                    if child_node.exists and child_node.agent_id is not None:
+                        eligible = True
+            if eligible:
                 node.phi += PHI_INTERNAL
+                
             # if node is on least-hop path to user (we approximate: if min_user_hop exists and node.hop_to_base <= min_user_hop)
             if min_user_hop is not None and node.hop_to_base <= min_user_hop:
-                node.phi += PHI_CONN
+                #node.phi += PHI_CONN
+                pass
+                ## TODO this also seems fishy. This can only
             # evaporation
             node.phi -= PHI_DECAY
             # clamp
@@ -524,6 +558,11 @@ try:
                     if nb in node_table and node_table[nb].exists:
                         p1 = n.pos; p2 = node_table[nb].pos
                         ax.plot([p1[0], p2[0]], [p1[1], p2[1]], c='lightgray', linewidth=0.7, zorder=1)
+            
+            #annotate the phi values on the nodes
+            for k,n in node_table.items():
+                if n.exists:
+                    ax.text(n.pos[0]+60, n.pos[1], f"{n.phi:.5f}", fontsize=6, color='k', ha='center', va='center', zorder=6)
 
             # draw agents with colors by state and small labels for id
             xs = [ag.pos[0] for ag in agents]
