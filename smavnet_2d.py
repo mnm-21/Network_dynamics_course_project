@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 AREA_W = 1000.0
 AREA_H = 1000.0
 BASE_POS = np.array([AREA_W / 2.0, 80.0])    # base near bottom center
-USER_POS = np.array([AREA_W / 2.0, AREA_H - 600.0])  # user near top center (fixed for single trial)
+USER_POS = np.array([AREA_W / 2.0 + 500, AREA_H - 600.0])  # user near top center (fixed for single trial)
 DT = 0.1                     # simulation step (s)
 TRIAL_DURATION = 900.0       # seconds (15 min) - single trial
 V = 10.0                     # agent speed (m/s)
