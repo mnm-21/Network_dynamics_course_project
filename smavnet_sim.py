@@ -317,14 +317,26 @@ class SmavNet2D:
                     min_user_hop = n.hop_to_base
 
         for key, node in list(self.node_table.items()):
-            if not node.exists:
+            if not node.exists or (node.i == 0 and node.j == 0):
                 continue
             n_ants = ant_counts.get(key, 0)
             node.phi += self.cfg.phi_ant * n_ants
-            if node.hop_to_base < float("inf"):
+            # if node.hop_to_base < float("inf"):
+            #     node.phi += self.cfg.phi_internal
+
+            i, j = node.i, node.j
+            eligible = False
+            for child_ij in [(i+1, j), (i, j+1)]:
+                if child_ij in self.node_table:
+                    child_node = self.node_table[child_ij]
+                    if child_node.exists and child_node.agent_id is not None:
+                        eligible = True
+            if eligible:
                 node.phi += self.cfg.phi_internal
+                                
             if min_user_hop is not None and node.hop_to_base <= min_user_hop:
-                node.phi += self.cfg.phi_conn
+                #node.phi += self.cfg.phi_conn
+                pass
             node.phi -= self.cfg.phi_decay
             node.phi = max(0.0, min(self.cfg.phi_max, node.phi))
 
@@ -632,6 +644,12 @@ class _Renderer:
                 dpos = sim._node_pos_from_ij(*ag.dest_ij)
                 ax.scatter([dpos[0]], [dpos[1]], marker='x', c='black', s=30, zorder=6)
                 ax.plot([ag.pos[0], dpos[0]], [ag.pos[1], dpos[1]], linewidth=0.8, linestyle='--', color='0.4', zorder=4)
+
+        #annotate the phi values on the nodes
+        for k,n in sim.node_table.items():
+            if n.exists:
+                ax.text(n.pos[0]+60, n.pos[1], f"{n.phi:.5f}", fontsize=6, color='k', ha='center', va='center', zorder=6)
+
 
         ax.legend(loc='upper right', fontsize=8, framealpha=0.8)
         info = (
