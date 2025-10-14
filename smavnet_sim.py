@@ -72,6 +72,19 @@ class SimulationResult:
 # Internal helper types
 # --------------------------
 
+##CHANGED
+class DataPacket:
+    def __init__(self, type, data = None, maxHops = 30):
+        ## recommended maxHops ~ number of agents. 
+        ##type is either BASE or USER , denoting the source of the data packet.
+        self.data = data
+        self.type = type
+        if self.type == "BASE":
+            self.hopCounter = 0
+        if self.type == "USER":
+            self.hopCounter = 1
+    def increment(self):
+        self.hopCounter+= 1
 
 class Node:
     def __init__(self, i: int, j: int, pos: np.ndarray, phi_init: float):
@@ -110,6 +123,9 @@ class Agent:
         self.spiral_omega = 2.0
         self.held_node: Optional[Tuple[int, int]] = None
 
+        #commmunication
+        self.data_queue = []
+
     def begin_launch(self, current_time: float, base_pos: np.ndarray):
         if self.state == "ON_GROUND":
             self.state = "LAUNCHING"
@@ -118,6 +134,23 @@ class Agent:
             self.ref_ij = (0, 0)
             self.dest_ij = None
             self.branch_sign = None
+    
+    ## CHANGED
+    def get_data(self, data):
+        self.data_queue.append(data)
+    
+    ##CHANGED
+    def push_data(self, sim):
+        nb_agents = sim.get_nb_agents(sim, self)
+        while self.data_queue:
+            data = self.data_queue.pop()
+            data.increment()
+
+            for agent in nb_agents:
+                if data.hopCounter <= data.maxHops:
+                    agent.get_data(data)
+            #get neighbor agents and do get_data on them and then delete the data from own
+
 
 
 class SmavNet2D:
@@ -148,6 +181,9 @@ class SmavNet2D:
         ]
         self._init_nodes()
         self.launch_times = self._schedule_launches()
+
+        #communication
+        self.hopCount = np.inf ##shortest base hopcount encountered by the user so far.
 
         # metrics
         self.success = False
@@ -551,6 +587,18 @@ class SmavNet2D:
                         best = hop_val
         return best
 
+    ## CHANGED
+    def get_nb_agents(self, agent):
+        node = self.node_table[agent.held_node]
+        nb_nodes = node.neighbors
+        res = []
+        for node_ in nb_nodes:
+            if node_ in self.node_table and node_.agent_id:
+                res.append(self.agents[node_.agent_id])
+        return res
+
+## TODO implement the broadcasting of the data packaets by the base and user, calling the push_data functions in the agents, and handlign when data reaches the user and updating the hopcount global thing
+#then use it to check if agent is on the shortest path and update pheromone accordingly. 
 
 # --------------------------
 # Optional matplotlib renderer
