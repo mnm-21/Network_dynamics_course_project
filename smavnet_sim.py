@@ -74,7 +74,7 @@ class SimulationResult:
 
 ##CHANGED
 class DataPacket:
-    def __init__(self, type, data = None, maxHops = 30):
+    def __init__(self, type, data = None, maxHops = 30, broadcastTime = 0.0):
         ## recommended maxHops ~ number of agents. 
         ##type is either BASE or USER , denoting the source of the data packet.
         self.data = data
@@ -83,8 +83,13 @@ class DataPacket:
             self.hopCounter = 0
         if self.type == "USER":
             self.hopCounter = 1
-    def increment(self):
+        self.lastBroadcastTime = broadcastTime
+
+    def increment(self, broadcastTime):
         self.hopCounter+= 1
+
+        #update broadcast time
+        self.lastBroadcastTime = broadcastTime
 
 class Node:
     def __init__(self, i: int, j: int, pos: np.ndarray, phi_init: float):
@@ -123,8 +128,12 @@ class Agent:
         self.spiral_omega = 2.0
         self.held_node: Optional[Tuple[int, int]] = None
 
+        #CHANGED
         #commmunication
         self.data_queue = []
+        self.minUserHopCount = np.inf #minimum hopcount of base data packet received so far.
+        self.minBaseHopCount = np.inf #minimum hopcount of user data packet received so far.
+    
 
     def begin_launch(self, current_time: float, base_pos: np.ndarray):
         if self.state == "ON_GROUND":
@@ -137,19 +146,48 @@ class Agent:
     
     ## CHANGED
     def get_data(self, data):
+        # simulates the agent recieving a data packet
         self.data_queue.append(data)
+
+        #update min hop counts if needed
+        if data.type == "BASE":
+            self.minBaseHopCount = min(self.minBaseHopCount, data.hopCounter)
+        if data.type == "USER":
+            self.minUserHopCount = min(self.minUserHopCount, data.hopCounter)
     
+    ## TODO when launching / retracting, reset the agent's hop data
+    ## TODO finetune phi_conn based on the communication interval and other params
+
     ##CHANGED
     def push_data(self, sim):
-        nb_agents = sim.get_nb_agents(sim, self)
+        #simulates the agent broadcasting all data packets in its queue to its neighbors
+        nb_agents = sim.get_nb_agents(self)
+        new_data = []
+
+        #check  if user is in communication range:
+        if sim._connected(self.pos, sim.user_pos):
+            for data in self.data_queue:
+                if data.type == "BASE" and data.LastBroadcastTime + 2 < sim.t:
+                    if data.hopCounter < sim.hopCount:
+                        sim.hopCount = min(data.hopCounter, sim.hopCount)
+                        print(f"User received base data with hopcount {data.hopCounter} at time {sim.t}.")
+
+        #get neighbor agents and do get_data on them and then delete the data from own
         while self.data_queue:
             data = self.data_queue.pop()
-            data.increment()
+            if data.LastBroadcastTime + 2 < sim.t: #broadcast delay at each node, 2 time steps
+                # This ensures packet hops happen when the push is called, not at each time step
+                # (push will be called on all agents at a certain time step. During this, each packet should travel atmost one agent.)
+                data.increment(sim.t)
+                for agent in nb_agents:
+                    if data.hopCounter <= data.maxHops:
+                        agent.get_data(data)
+            else:
+                new_data.append(data) #put it back in the queue if not broadcasted yet
 
-            for agent in nb_agents:
-                if data.hopCounter <= data.maxHops:
-                    agent.get_data(data)
-            #get neighbor agents and do get_data on them and then delete the data from own
+
+        self.data_queue = new_data
+            
 
 
 
@@ -182,8 +220,10 @@ class SmavNet2D:
         self._init_nodes()
         self.launch_times = self._schedule_launches()
 
+        #CHANGED
         #communication
-        self.hopCount = np.inf ##shortest base hopcount encountered by the user so far.
+        self.hopCount = -1 ##shortest base hopcount encountered by the user so far.
+        self.communicaton_interval = 5 #time steps.
 
         # metrics
         self.success = False
@@ -192,6 +232,8 @@ class SmavNet2D:
         self.last_agent_user_distance = float("inf")
         self.nodes_created = 1  # base node
         self._success_via_min_hop_flag: Optional[bool] = None
+
+
 
     # ---------------------- utils ----------------------
     @staticmethod
@@ -335,6 +377,9 @@ class SmavNet2D:
                         ag.ref_ij = dest
                         ag.dest_ij = None
                         ag.branch_sign = None
+        
+        #communication step
+        self.communicate()
 
         # pheromone updates and hops
         self._recompute_hop_to_base()
@@ -348,6 +393,7 @@ class SmavNet2D:
         # minimal-hop among nodes that see user
         min_user_hop: Optional[float] = None
         for k, n in self.node_table.items():
+            ## NOTE check what is the point of this
             if n.exists and float(np.linalg.norm(n.pos - self.user_pos)) <= self.cfg.comm_r:
                 if min_user_hop is None or n.hop_to_base < min_user_hop:
                     min_user_hop = n.hop_to_base
@@ -357,8 +403,6 @@ class SmavNet2D:
                 continue
             n_ants = ant_counts.get(key, 0)
             node.phi += self.cfg.phi_ant * n_ants
-            # if node.hop_to_base < float("inf"):
-            #     node.phi += self.cfg.phi_internal
 
             i, j = node.i, node.j
             eligible = False
@@ -369,10 +413,15 @@ class SmavNet2D:
                         eligible = True
             if eligible:
                 node.phi += self.cfg.phi_internal
-                                
-            if min_user_hop is not None and node.hop_to_base <= min_user_hop:
-                #node.phi += self.cfg.phi_conn
-                pass
+
+            #if user connection has been established, check the min hop of each agent and increment phi value of the corresponding nodes
+            if self.hopCount != -1:
+                #agent corresponding to this node:
+                if node.agent_id is not None:
+                    ag = self.agents[node.agent_id]
+                    if ag.minUserHopCount + ag.minBaseHopCount <= self.hopCount:
+                        node.phi += self.cfg.phi_conn                         
+            
             node.phi -= self.cfg.phi_decay
             node.phi = max(0.0, min(self.cfg.phi_max, node.phi))
 
@@ -597,8 +646,45 @@ class SmavNet2D:
                 res.append(self.agents[node_.agent_id])
         return res
 
-## TODO implement the broadcasting of the data packaets by the base and user, calling the push_data functions in the agents, and handlign when data reaches the user and updating the hopcount global thing
-#then use it to check if agent is on the shortest path and update pheromone accordingly. 
+    ## CHANGED
+    def broadcast_base_data(self):
+        base_packet = DataPacket("BASE", data = "Base Packet", maxHops = self.cfg.n_agents + 2)
+        
+        #agents that are in comm range of base get the data packet
+        agent_list = []
+        for ag in self.agents:
+            if self._connected(ag.pos, self.base_pos):
+                agent_list.append(ag)
+        for ag in agent_list:
+            ag.get_data(base_packet)
+
+    ## CHANGED
+    def broadcast_user_data(self):
+        user_packet = DataPacket("USER", data = "User Packet", maxHops = self.cfg.n_agents + 2)
+        
+        #agents that are in comm range of user get the data packet
+        node_list = []
+        for k,n in self.node_table.items():
+            if n.exists and self._connected(n.pos, self.user_pos):
+                node_list.append(n)
+        
+        #agents that are in the node_list get the data packet
+        agent_list = []
+        for n in node_list:
+            if n.agent_id is not None:
+                agent_list.append(self.agents[n.agent_id])
+        for ag in agent_list:
+            ag.get_data(user_packet)
+    
+    def communicate(self):
+        if self.step_idx % self.communicaton_interval == 0:
+            print("Doing communication step at time ", self.t)
+            self.broadcast_base_data()
+            self.broadcast_user_data()
+            for ag in self.agents:
+                ag.push_data(self)
+        
+
 
 # --------------------------
 # Optional matplotlib renderer
