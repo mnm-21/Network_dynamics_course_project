@@ -84,6 +84,7 @@ class DataPacket:
         if self.type == "USER":
             self.hopCounter = 1
         self.lastBroadcastTime = broadcastTime
+        self.maxHops = maxHops
 
     def increment(self, broadcastTime):
         self.hopCounter+= 1
@@ -166,16 +167,22 @@ class Agent:
 
         #check  if user is in communication range:
         if sim._connected(self.pos, sim.user_pos):
+            #print(f"Agent {self.id} is in comm range of user at time {sim.t}.")
             for data in self.data_queue:
-                if data.type == "BASE" and data.LastBroadcastTime + 2 < sim.t:
+                if data.type == "BASE" and data.lastBroadcastTime + 2*sim.dt < sim.t:
+                    #print(f"User received base data with hopcount {data.hopCounter} at time {sim.t}.")
                     if data.hopCounter < sim.hopCount:
                         sim.hopCount = min(data.hopCounter, sim.hopCount)
-                        print(f"User received base data with hopcount {data.hopCounter} at time {sim.t}.")
+                        #print(f"User received base data with hopcount {data.hopCounter} at time {sim.t}.")
+                        #print("######\n"*10)
+
+        #TODO check success and user_hops in the plot
+
 
         #get neighbor agents and do get_data on them and then delete the data from own
         while self.data_queue:
             data = self.data_queue.pop()
-            if data.LastBroadcastTime + 2 < sim.t: #broadcast delay at each node, 2 time steps
+            if data.lastBroadcastTime + 2*sim.dt < sim.t: #broadcast delay at each node, 2 time steps
                 # This ensures packet hops happen when the push is called, not at each time step
                 # (push will be called on all agents at a certain time step. During this, each packet should travel atmost one agent.)
                 data.increment(sim.t)
@@ -222,7 +229,7 @@ class SmavNet2D:
 
         #CHANGED
         #communication
-        self.hopCount = -1 ##shortest base hopcount encountered by the user so far.
+        self.hopCount = np.inf ##shortest base hopcount encountered by the user so far.
         self.communicaton_interval = 5 #time steps.
 
         # metrics
@@ -415,7 +422,7 @@ class SmavNet2D:
                 node.phi += self.cfg.phi_internal
 
             #if user connection has been established, check the min hop of each agent and increment phi value of the corresponding nodes
-            if self.hopCount != -1:
+            if self.hopCount != np.inf:
                 #agent corresponding to this node:
                 if node.agent_id is not None:
                     ag = self.agents[node.agent_id]
@@ -424,6 +431,8 @@ class SmavNet2D:
             
             node.phi -= self.cfg.phi_decay
             node.phi = max(0.0, min(self.cfg.phi_max, node.phi))
+
+        #TODO hopcount is 31 for some reason???
 
         # Node -> Ant reversion when phi decays to zero (except base)
         for k, node in list(self.node_table.items()):
@@ -496,6 +505,9 @@ class SmavNet2D:
         # advance time
         self.t += dt
         self.step_idx += 1
+
+        if self.step_idx % 50 == 0:
+            print("sim hopcount:", self.hopCount)
 
     # ---------------------- subroutines ----------------------
     def _agent_step_motion(self, ag: Agent, dt: float, t: float) -> None:
@@ -638,18 +650,21 @@ class SmavNet2D:
 
     ## CHANGED
     def get_nb_agents(self, agent):
-        node = self.node_table[agent.held_node]
-        nb_nodes = node.neighbors
-        res = []
-        for node_ in nb_nodes:
-            if node_ in self.node_table and node_.agent_id:
-                res.append(self.agents[node_.agent_id])
-        return res
-
+        if agent.held_node: 
+            node = self.node_table[agent.held_node]
+            nb_nodes = node.neighbors
+            res = []
+            for node_ in nb_nodes:
+                if node_ in self.node_table and self.node_table[node_].agent_id:
+                    res.append(self.agents[self.node_table[node_].agent_id])
+            return res
+        return []
     ## CHANGED
     def broadcast_base_data(self):
         base_packet = DataPacket("BASE", data = "Base Packet", maxHops = self.cfg.n_agents + 2)
         
+        #print("Broadcasting base data at time ", self.t)
+
         #agents that are in comm range of base get the data packet
         agent_list = []
         for ag in self.agents:
@@ -662,6 +677,8 @@ class SmavNet2D:
     def broadcast_user_data(self):
         user_packet = DataPacket("USER", data = "User Packet", maxHops = self.cfg.n_agents + 2)
         
+        #print("Broadcasting user data at time ", self.t)
+
         #agents that are in comm range of user get the data packet
         node_list = []
         for k,n in self.node_table.items():
@@ -678,7 +695,7 @@ class SmavNet2D:
     
     def communicate(self):
         if self.step_idx % self.communicaton_interval == 0:
-            print("Doing communication step at time ", self.t)
+            #print("Doing communication step at time ", self.t)
             self.broadcast_base_data()
             self.broadcast_user_data()
             for ag in self.agents:
