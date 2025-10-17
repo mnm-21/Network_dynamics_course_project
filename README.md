@@ -297,5 +297,5 @@ This implementation is an independent adaptation of the original SMAVNET algorit
 
 This is an academic project. For questions or suggestions, please contact the authors:
 
-- **Mayank Chandak** (ME22B224): me22b224@smail.iitm.ac.in
-- **Aldis Daniel** (ME22B070): me22b070@smail.iitm.ac.in
+- **Mayank Chandak** (ME22B224): [me22b224@smail.iitm.ac.in](mailto:me22b224@smail.iitm.ac.in)
+- **Aldis Daniel** (ME22B070): [me22b070@smail.iitm.ac.in](mailto:me22b070@smail.iitm.ac.in)
