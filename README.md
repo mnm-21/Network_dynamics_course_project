@@ -229,8 +229,6 @@ cfg = SimulationConfig(
 
 - **Headless Mode**: Use `headless=True` for maximum performance in experiments
 - **Termination**: Set `terminate_on_success=True` to stop simulation upon first success
-- **Data Flooding**: Can be disabled in optimized version for pure search scenarios
-- **Hop Recalculation**: Optimized to run less frequently in headless mode
 
 ## File Structure
 
@@ -244,16 +242,56 @@ cfg = SimulationConfig(
 
 ## Research Context
 
-This implementation is based on the research paper "Ant-based swarming with positionless micro air vehicles for communication relay" and adapts the 3D algorithm for 2D simulation. The system demonstrates:
+This implementation is based on the research paper:
+
+**Hauert, Sabine & Winkler, Laurent & Zufferey, Jean-Christophe & Floreano, Dario. (2008). Ant-based Swarming with Positionless Micro Air Vehicles for Communication Relay. Swarm Intelligence. 2. 10.1007/s11721-008-0013-5.**
+
+The original work presents a 3D bio-inspired communication relay system using Micro Air Vehicles (MAVs) that employ ant colony optimization principles. This project adapts the 3D algorithm for 2D simulation while maintaining the core biological inspiration and swarm intelligence concepts.
+
+### Key Contributions from Original Paper
 
 - Bio-inspired swarm intelligence for communication networks
-- Self-organizing network formation and maintenance
+- Self-organizing network formation and maintenance using pheromone trails
 - Adaptive search strategies for user location
-- Robust communication relay capabilities
+- Robust communication relay capabilities in dynamic environments
+- Positionless navigation using relative positioning and communication
+
+### Our 2D Adaptation
+
+This implementation demonstrates:
+
+- **2D Lattice Structure**: Hexagonal-like lattice based on (i,j) coordinates
+- **Pheromone-based Path Selection**: Deneubourg-style probabilistic branch selection
+- **Data Flooding Protocol**: Two-phase communication for least-hop route identification
+- **Dynamic Retraction**: Agents follow maximum pheromone paths back to base
+- **Continuous Launch System**: Maintains active agent population through relaunching
+- **Comprehensive Experiments**: Scalability analysis and performance evaluation tools
 
 ## License
 
-This project is developed for academic research purposes as part of ME5253 Network Dynamics course work.
+This project is developed for academic research purposes as part of ME5253 Network Dynamics course work at IIT Madras.
+
+### Academic Use
+
+This implementation is provided for educational and research purposes. The original SMAVNET algorithm is based on the research paper by Hauert et al. (2008). Users are encouraged to:
+
+- Cite the original paper when using this implementation in academic work
+- Follow academic integrity guidelines when building upon this work
+- Respect the intellectual property of the original authors
+
+### Original Paper Citation
+
+When referencing this implementation, please also cite the original work:
+
+```
+Hauert, S., Winkler, L., Zufferey, J. C., & Floreano, D. (2008). 
+Ant-based swarming with positionless micro air vehicles for communication relay. 
+Swarm Intelligence, 2(1), 73-95. https://doi.org/10.1007/s11721-008-0013-5
+```
+
+### Disclaimer
+
+This implementation is an independent adaptation of the original SMAVNET algorithm for 2D simulation. The authors of this implementation are not affiliated with the original paper authors and do not claim ownership of the underlying SMAVNET concept or algorithm.
 
 ## Contributing
 
