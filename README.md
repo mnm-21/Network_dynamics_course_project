@@ -295,4 +295,7 @@ This implementation is an independent adaptation of the original SMAVNET algorit
 
 ## Contributing
 
-This is an academic project. For questions or suggestions, please contact the authors.
+This is an academic project. For questions or suggestions, please contact the authors:
+
+- **Mayank Chandak** (ME22B224): me22b224@smail.iitm.ac.in
+- **Aldis Daniel** (ME22B070): me22b070@smail.iitm.ac.in
