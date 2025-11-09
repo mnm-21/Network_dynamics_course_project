@@ -1,6 +1,6 @@
 # SMAVNET 2D Simulator
 
-A Python implementation of the Swarm-based Micro Air Vehicle Network (SMAVNET) system for communication relay in 2D environments. This project recreates the ant-based swarming algorithm described in "Ant-based swarming with positionless micro air vehicles for communication relay" adapted for 2D simulation.
+A Python implementation of the Swarm-based Micro Air Vehicle Network (SMAVNET) system for communication relay in 2D environments. This project includes both a baseline reproduction of the original algorithm and an extended version with wind disturbances and drift mitigation mechanisms.
 
 ## Authors
 
@@ -11,27 +11,76 @@ A Python implementation of the Swarm-based Micro Air Vehicle Network (SMAVNET) s
 
 SMAVNET is a bio-inspired communication relay system that uses Micro Air Vehicles (MAVs) to establish and maintain communication networks. The system employs ant colony optimization principles where MAVs act as mobile communication nodes, creating a dynamic network that can adapt to changing conditions and user locations.
 
+This repository contains two implementations:
+
+1. **`smavnet_sim_final.py`**: Baseline implementation that faithfully reproduces the original SMAVNET algorithm from the research paper, adapted for 2D simulation. This serves as a reference implementation demonstrating the core ant-based swarming behavior without environmental disturbances.
+
+2. **`smavnet_sim_final_wind.py`**: Extended implementation developed for the course project, adding:
+   - **Wind Disturbance Model**: Realistic time-varying wind field affecting agent motion
+   - **Node Replacement Mechanism**: Probabilistic replacement policy to mitigate drift accumulation
+   - **Drift Metrics**: Comprehensive tracking of geometric stability and drift reduction
+   - **Enhanced Visualization**: Improved renderer with wind visualization and detailed metrics
+
 ### Key Features
 
 - **Bio-inspired Algorithm**: Implements pheromone-based path selection similar to ant colony optimization
 - **Dynamic Network Formation**: MAVs autonomously create and maintain communication relay networks
 - **User Search Capability**: System can locate and establish communication with users in the search area
+- **Wind Robustness** (extended version): Handles environmental disturbances with drift mitigation
 - **Configurable Parameters**: Extensive configuration options for simulation parameters
 - **Headless and Visual Modes**: Fast headless simulation for experiments and optional real-time visualization
 - **Comprehensive Experiments**: Built-in scalability and performance analysis tools
 
 ## Installation
 
-1. Clone or download this repository
-2. Install required dependencies:
+### Prerequisites
+
+- Python 3.7 or higher
+- pip (Python package installer)
+
+### Setup Steps
+
+1. **Clone or download this repository**
+
+2. **Navigate to the project directory**:
+   ```bash
+   cd Network_dynamics_course_project
+   ```
+
+3. **Install required dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+   This will install:
+   - `numpy` - For numerical computations and array operations
+   - `matplotlib` - For visualization and plotting
+   - `tqdm` - For progress bars during long experiments
+
+4. **Verify installation**:
+   ```bash
+   python -c "import numpy, matplotlib, tqdm; print('All dependencies installed successfully!')"
+   ```
+
+### Quick Test
+
+Run a quick test to verify everything works:
 
 ```bash
-pip install -r requirements.txt
+python smavnet_sim_final.py
+```
+
+This should run a short simulation and print results. For the wind implementation:
+
+```bash
+python smavnet_sim_final_wind.py
 ```
 
 ## Quick Start
 
-### Basic Usage
+### Basic Usage (Baseline Implementation)
+
+The baseline implementation (`smavnet_sim_final.py`) reproduces the original SMAVNET algorithm:
 
 ```python
 from smavnet_sim_final import SimulationConfig, SmavNet2D
@@ -57,19 +106,112 @@ print(f"Success Time: {result.success_time}s")
 print(f"User Position: {result.user_pos}")
 ```
 
+### Extended Usage (Wind Implementation)
+
+The extended implementation (`smavnet_sim_final_wind.py`) adds wind disturbances and replacement mechanisms:
+
+```python
+from smavnet_sim_final_wind import SimulationConfig, SmavNet2D
+
+# Create simulation configuration with wind
+cfg = SimulationConfig(
+    n_agents=18,
+    comm_r=100.0,
+    duration=1800.0,
+    enable_wind=True,              # Enable wind disturbances
+    wind_speed=2.0,                # Wind speed (m/s)
+    enable_replacement=True,       # Enable node replacement
+    replacement_min_age=30.0,      # Minimum node age before replacement
+    replacement_time_scale=120.0,  # Replacement probability time scale
+    seed=42
+)
+
+# Create and run simulation
+sim = SmavNet2D(cfg)
+result = sim.run(headless=True)
+
+# Check results including drift metrics
+print(f"Success: {result.success}")
+print(f"Success Time: {result.success_time}s")
+print(f"Average Drift: {result.avg_drift:.4f} (normalized)")
+print(f"Average Drift: {result.avg_drift_raw:.2f}m (raw)")
+if result.num_swaps > 0:
+    print(f"Number of Swaps: {result.num_swaps}")
+    print(f"Average Drift Reduction: {result.avg_drift_reduction:.4f} per swap")
+```
+
 ### Visual Simulation
+
+Both implementations support real-time visualization:
 
 ```python
 # Run with real-time visualization
 result = sim.run(headless=False)
 ```
 
+The visual mode shows:
+- Agent positions and states (ANT, NODE, CIRCLING, RETRACTING, HOMING)
+- Node positions with pheromone levels
+- Communication links between nodes
+- Wind vector (if enabled)
+- Agent-to-destination connections
+- Success status and metrics
+
+## Implementation Files
+
+### `smavnet_sim_final.py` - Baseline Implementation
+
+This file contains the baseline SMAVNET 2D implementation that faithfully reproduces the original algorithm from the research paper. It serves as a reference implementation demonstrating:
+
+- Core ant-based swarming behavior
+- Pheromone-based path selection
+- Data flooding and control propagation
+- Dynamic node creation and retraction
+- Original algorithm behavior without environmental disturbances
+
+**Use this file when:**
+- Reproducing baseline results from the original paper
+- Understanding the core SMAVNET algorithm
+- Comparing against the original implementation
+- Running experiments without wind disturbances
+
+### `smavnet_sim_final_wind.py` - Extended Implementation
+
+This file extends the baseline implementation with wind disturbances and drift mitigation mechanisms, developed as part of the course project. It includes all features from the baseline plus:
+
+- **Wind Disturbance Model**: Time-varying wind field with deterministic and stochastic components
+- **Node Replacement Policy**: Probabilistic replacement mechanism to reduce drift accumulation
+- **Drift Metrics**: Comprehensive tracking of geometric stability
+- **Enhanced Renderer**: Improved visualization with wind arrows and detailed metrics
+
+**Use this file when:**
+- Studying robustness to environmental disturbances
+- Analyzing drift mitigation strategies
+- Running experiments with wind conditions
+- Evaluating replacement mechanism effectiveness
+
+### `experiments_wind.py` - Wind Experiments
+
+This file contains experimental tools specifically designed for analyzing the wind implementation:
+
+- **Replacement Comparison**: Compares drift metrics with and without replacement
+- **Drift Analysis**: Studies effectiveness of replacement events
+- **Scalability Analysis**: Evaluates performance across different swarm sizes
+- **Automated Plot Generation**: Creates timestamped output directories for results
+
+**Use this file when:**
+- Running comprehensive experiments on wind robustness
+- Analyzing drift reduction effectiveness
+- Generating publication-quality plots
+- Comparing replacement strategies
+
 ## Core Classes
 
 ### SimulationConfig
 
-Configuration dataclass containing all simulation parameters:
+Configuration dataclass containing all simulation parameters. Both implementations share common parameters:
 
+**Common Parameters:**
 - **Area and Timing**: `area_w`, `area_h`, `dt`, `duration`
 - **Dynamics**: `speed`, `comm_r`, `n_agents`, launch parameters
 - **Pheromone System**: `phi_init`, `phi_max`, `phi_ant`, `phi_conn`, `phi_internal`, `phi_decay`, `mu`
@@ -78,10 +220,17 @@ Configuration dataclass containing all simulation parameters:
 - **Communication**: `data_interval` for data flooding
 - **Control**: `seed`, `terminate_on_success`
 
+**Extended Parameters** (wind implementation only):
+- **Wind Disturbances**: `enable_wind`, `wind_speed`, `wind_direction_mean`, `wind_direction_std`, `wind_angular_frequency`, `wind_magnitude_variation`, `wind_effect_scale`
+- **Arrival Detection**: `arrival_distance_factor`, `arrival_threshold`, `arrival_time_factor`
+- **Replacement Policy**: `enable_replacement`, `replacement_min_age`, `replacement_time_scale`
+- **Logging**: `log` (enable/disable debug prints)
+
 ### SimulationResult
 
-Results dataclass containing simulation outcomes:
+Results dataclass containing simulation outcomes. The baseline version includes:
 
+**Baseline Results:**
 - `success`: Whether user was found within communication range
 - `success_time`: Time when success was achieved (seconds)
 - `final_time`: Total simulation time
@@ -95,6 +244,19 @@ Results dataclass containing simulation outcomes:
 - `success_via_min_hop_at_time`: Whether success occurred via minimal hop path
 - `optimal_hop_len_at_end`: Optimal hop count to user at simulation end
 - `min_hop_len_at_end`: Minimum hop count to user at simulation end
+
+**Extended Results** (wind implementation only):
+- `num_swaps`: Total number of node replacement events
+- `swap_times`: List of times when replacements occurred
+- `swap_nodes`: List of node coordinates where replacements occurred
+- `swap_ages`: List of node ages at replacement time
+- `avg_drift`: Time-averaged drift (normalized by comm_r)
+- `avg_drift_raw`: Time-averaged drift in meters
+- `swap_pre_drifts`: Drift values before each replacement
+- `swap_post_drifts`: Drift values after each replacement
+- `swap_drift_reductions`: Drift reduction for each replacement event
+- `avg_drift_reduction`: Average drift reduction per swap (normalized)
+- `avg_drift_reduction_raw`: Average drift reduction per swap in meters
 
 ### SmavNet2D
 
@@ -143,14 +305,70 @@ When node pheromone decays to zero:
 - Spiral search for reconnection if path is lost
 - Continuous relaunch system keeps agents active
 
+## Wind Disturbance Model
+
+The extended implementation includes a realistic wind model that affects agent motion:
+
+### Wind Components
+
+The wind vector combines three components:
+1. **Deterministic Sinusoidal Variation**: Low-frequency periodic changes in wind direction
+2. **Random Walk Component**: Stochastic gusts and turbulence
+3. **Magnitude Variation**: Random fluctuations in wind speed
+
+### Wind Parameters
+
+- `wind_speed`: Nominal wind speed magnitude (m/s)
+- `wind_direction_mean`: Mean wind direction in degrees (0=north, 90=east)
+- `wind_direction_std`: Standard deviation of wind direction variation
+- `wind_angular_frequency`: Frequency of sinusoidal variation (rad/s)
+- `wind_magnitude_variation`: Variation coefficient for wind speed
+- `wind_effect_scale`: Scaling factor to adjust wind influence on motion
+
+### Wind Effect on Agents
+
+Wind affects agent motion in two ways:
+1. **Direct Displacement**: Wind vector is added to agent velocity each timestep
+2. **Orbit Center Drift**: For circling agents, the orbit center itself drifts with wind, maintaining realistic physics
+
+## Node Replacement Mechanism
+
+To mitigate drift accumulation under wind, the extended implementation includes a probabilistic node replacement policy:
+
+### Replacement Logic
+
+When an agent arrives at an existing node:
+1. **Age Calculation**: Node age = current_time - node_creation_time
+2. **Probability Evaluation**: Replacement probability increases exponentially with age:
+   ```
+   p_replace = 1 - exp(-(age - min_age) / tau)
+   ```
+3. **Replacement Decision**: If probability threshold is met, new agent takes over the node
+4. **Drift Reduction**: Previous holder transitions to HOMING state, moving toward new node's orbit center
+
+### Replacement Parameters
+
+- `enable_replacement`: Enable/disable replacement mechanism
+- `replacement_min_age`: Minimum node age (seconds) before replacement can occur
+- `replacement_time_scale`: Time scale parameter (tau) controlling probability growth
+
+### Replacement Benefits
+
+- **Drift Mitigation**: Fresh agents reduce accumulated drift at nodes
+- **Network Stability**: Maintains geometric coherence under persistent disturbances
+- **Self-Organizing**: No centralized control required
+- **Scalable**: Replacement rate scales naturally with swarm size
+
 ## Experiments
 
-The project includes comprehensive experimental tools in `experiments_scalability.py`:
+The project includes two experiment files:
 
-### Scalability Analysis
+### `experiments.py` - Baseline Experiments
+
+Contains experiments for the baseline implementation (reproduction of original paper):
 
 ```python
-from experiments_scalability import run_scalability_experiment
+from experiments import run_scalability_experiment
 
 # Test success probability vs swarm size
 run_scalability_experiment(
@@ -162,33 +380,120 @@ run_scalability_experiment(
 )
 ```
 
-### Success Probability vs Time
+### `experiments_wind.py` - Wind Experiments
+
+Contains experiments specifically for the wind implementation:
+
+#### Replacement Comparison
+
+Compare drift metrics with and without replacement:
 
 ```python
-from experiments_scalability import run_success_prob_vs_time_experiment
+from experiments_wind import run_replacement_comparison_experiment
 
-# Analyze cumulative success probability over time
-run_success_prob_vs_time_experiment(
-    n_agents=15,
-    num_trials=10000,
-    max_duration_s=1800.0
+run_replacement_comparison_experiment(
+    swarm_sizes=list(range(5, 21)),
+    num_trials=500,
+    duration_s=1800.0,
+    area_w=800.0,
+    area_h=600.0,
+    wind_speed=2.0,
+    output_dir="./results"
 )
 ```
 
-### User Distribution Analysis
+This generates:
+- Average drift comparison plot (with vs without replacement)
+- Number of swaps vs swarm size plot
+
+#### Drift Analysis
+
+Analyze replacement effectiveness:
 
 ```python
-from experiments_scalability import plot_user_distribution_with_coverage
+from experiments_wind import run_drift_vs_replacement_experiment
 
-# Visualize user placement and search coverage
-plot_user_distribution_with_coverage(
+run_drift_vs_replacement_experiment(
     n_agents=15,
     num_trials=500,
-    duration_s=1800.0
+    duration_s=1800.0,
+    wind_speed=2.0,
+    output_dir="./results"
 )
 ```
 
+This generates:
+- Pre vs post drift scatter plot
+- Drift reduction vs pre-swap drift
+- Drift reduction over time
+- Drift reduction vs node age
+
+#### Running All Wind Experiments
+
+```bash
+python experiments_wind.py
+```
+
+This will:
+1. Create a timestamped output directory
+2. Run replacement comparison experiment
+3. Run drift analysis experiment
+4. Save all plots to the output directory
+
 ## Configuration Examples
+
+### Baseline Configuration
+
+```python
+from smavnet_sim_final import SimulationConfig, SmavNet2D
+
+cfg = SimulationConfig(
+    n_agents=18,
+    comm_r=100.0,
+    duration=900.0,
+    speed=10.0,
+    seed=42,
+    user_mode="uniform"
+)
+```
+
+### Wind Configuration (Low Wind)
+
+```python
+from smavnet_sim_final_wind import SimulationConfig, SmavNet2D
+
+cfg = SimulationConfig(
+    n_agents=18,
+    comm_r=100.0,
+    duration=1800.0,
+    enable_wind=True,
+    wind_speed=0.5,              # Light wind
+    enable_replacement=True,
+    replacement_min_age=30.0,
+    replacement_time_scale=120.0,
+    seed=42
+)
+```
+
+### Wind Configuration (Moderate Wind)
+
+```python
+from smavnet_sim_final_wind import SimulationConfig, SmavNet2D
+
+cfg = SimulationConfig(
+    n_agents=18,
+    comm_r=100.0,
+    duration=1800.0,
+    enable_wind=True,
+    wind_speed=2.0,              # Moderate wind
+    wind_direction_mean=45.0,    # Northeast
+    wind_direction_std=30.0,     # Variable direction
+    enable_replacement=True,
+    replacement_min_age=30.0,
+    replacement_time_scale=120.0,
+    seed=42
+)
+```
 
 ### High-Speed Search
 
@@ -225,20 +530,77 @@ cfg = SimulationConfig(
 )
 ```
 
+## Running Experiments
+
+### Baseline Experiments
+
+Run experiments for the baseline implementation:
+
+```bash
+python experiments.py
+```
+
+This will generate plots for:
+- Scalability analysis (success probability vs swarm size)
+- Success probability vs time
+- User distribution and coverage
+
+### Wind Experiments
+
+Run experiments for the wind implementation:
+
+```bash
+python experiments_wind.py
+```
+
+This will:
+1. Create a timestamped output directory (e.g., `replacement_drift_experiments_20240101_120000/`)
+2. Run replacement comparison experiment (with vs without replacement)
+3. Run drift analysis experiment
+4. Save all plots to the output directory
+
+Output plots include:
+- `replacement_comparison_drift.png`: Average drift comparison
+- `replacement_swaps_vs_swarm_size.png`: Number of swaps vs swarm size
+- `replacement_pre_post_drift_n15_trials500.png`: Pre vs post drift scatter
+- `replacement_reduction_vs_pre_drift_n15_trials500.png`: Reduction effectiveness
+- `replacement_reduction_over_time_n15_trials500.png`: Reduction over time
+- `replacement_reduction_vs_age_n15_trials500.png`: Reduction vs node age
+
 ## Performance Considerations
 
 - **Headless Mode**: Use `headless=True` for maximum performance in experiments
 - **Termination**: Set `terminate_on_success=True` to stop simulation upon first success
+- **Batch Experiments**: Wind experiments can take significant time (500 trials × multiple swarm sizes). Consider running overnight or on a compute cluster for large-scale analysis
+- **Memory**: Long simulations with many agents may require increased memory allocation
 
 ## File Structure
 
 ```
-├── smavnet_sim_final.py          # Main simulation implementation
-├── experiments_scalability.py    # Experimental analysis tools
+Network_dynamics_course_project/
+├── smavnet_sim_final.py          # Baseline implementation (original algorithm reproduction)
+├── smavnet_sim_final_wind.py     # Extended implementation (wind + replacement mechanism)
+├── experiments.py                # Baseline experiments (scalability, success probability)
+├── experiments_wind.py           # Wind experiments (drift analysis, replacement comparison)
 ├── requirements.txt              # Python dependencies
 ├── README.md                     # This file
+├── pics/                         # Generated plots and figures
 └── Ant-based swarming with positionless micro air vehicles for communication relay.pdf
 ```
+
+### File Descriptions
+
+- **`smavnet_sim_final.py`**: Baseline SMAVNET 2D implementation reproducing the original algorithm. Use for baseline comparisons and understanding core behavior.
+
+- **`smavnet_sim_final_wind.py`**: Extended implementation with wind disturbances and drift mitigation. Includes all baseline features plus wind model, replacement mechanism, and drift metrics.
+
+- **`experiments.py`**: Experimental tools for baseline implementation. Includes scalability analysis, success probability vs time, and user distribution visualization.
+
+- **`experiments_wind.py`**: Experimental tools for wind implementation. Includes replacement comparison, drift analysis, and automated plot generation with timestamped output directories.
+
+- **`requirements.txt`**: Python package dependencies (numpy, matplotlib, tqdm).
+
+- **`pics/`**: Directory containing generated plots and figures from experiments.
 
 ## Research Context
 
@@ -258,7 +620,7 @@ The original work presents a 3D bio-inspired communication relay system using Mi
 
 ### Our 2D Adaptation
 
-This implementation demonstrates:
+The baseline implementation (`smavnet_sim_final.py`) demonstrates:
 
 - **2D Lattice Structure**: Hexagonal-like lattice based on (i,j) coordinates
 - **Pheromone-based Path Selection**: Deneubourg-style probabilistic branch selection
@@ -266,6 +628,27 @@ This implementation demonstrates:
 - **Dynamic Retraction**: Agents follow maximum pheromone paths back to base
 - **Continuous Launch System**: Maintains active agent population through relaunching
 - **Comprehensive Experiments**: Scalability analysis and performance evaluation tools
+
+### Course Project Extensions
+
+The extended implementation (`smavnet_sim_final_wind.py`) adds:
+
+- **Wind Disturbance Model**: Realistic time-varying wind field affecting agent motion
+  - Deterministic sinusoidal variation for low-frequency drift
+  - Random walk component for stochastic gusts
+  - Magnitude variation for speed fluctuations
+  
+- **Node Replacement Mechanism**: Probabilistic replacement policy to mitigate drift
+  - Age-based replacement probability: `p = 1 - exp(-(age - min_age) / tau)`
+  - Automatic drift reduction through fresh agent assignment
+  - Self-organizing and scalable design
+  
+- **Drift Metrics**: Comprehensive geometric stability tracking
+  - Time-averaged drift across all nodes
+  - Per-swap drift reduction measurements
+  - Normalized and raw drift values for analysis
+  
+- **Enhanced Visualization**: Improved renderer with wind arrows, pheromone annotations, and detailed metrics
 
 ## License
 

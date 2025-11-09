@@ -83,14 +83,14 @@ def run_instantaneous_success_prob_experiment(
     angle_deg: float,
     base_seed: int = 12345
 ) -> None:
-    """Run experiments to measure instantaneous success probability at each second."""
+    """Run experiments to measure instantaneous success probability at each 5 seconds."""
     print(f"Running instantaneous success probability experiment for {n_agents} MAVs...")
     
-    # Time points to evaluate (every second)
-    time_points = np.arange(0, max_duration_s + 1, 1)  # Every second
+    # Time points to evaluate (every 5 seconds)
+    time_points = np.arange(0, max_duration_s + 1, 5)  # Every 5 seconds
     success_probs = []
     
-    for t in tqdm(time_points, desc=f"Evaluating each second for {n_agents} MAVs"):
+    for t in tqdm(time_points, desc=f"Evaluating every 5 seconds for {n_agents} MAVs"):
         successes = 0
         for k in range(num_trials):
             seed = base_seed + n_agents * 100000 + k + int(t)  # Include time in seed for variation
@@ -124,65 +124,6 @@ def run_instantaneous_success_prob_experiment(
     plt.savefig(out_file, dpi=1000)
     plt.close()
     print(f"Saved plot to {out_file}")
-
-
-def run_success_prob_vs_time_experiment(
-    n_agents: int,
-    num_trials: int,
-    max_duration_s: float,
-    area_w: float,
-    area_h: float,
-    comm_r: float,
-    step_factor: float,
-    angle_deg: float,
-    base_seed: int = 12345
-) -> None:
-    """Run experiments to measure success probability vs time and plot results."""
-    print(f"Running success probability vs time experiment for {n_agents} MAVs...")
-    
-    # Collect all success times from trials
-    success_times = []
-    
-    for k in tqdm(range(num_trials), desc=f"Collecting success times for {n_agents} MAVs"):
-        seed = base_seed + n_agents * 100000 + k
-        cfg = SimulationConfig(
-            n_agents=n_agents,
-            duration=max_duration_s,
-            seed=seed,
-            user_mode="uniform",
-            area_w=area_w,
-            area_h=area_h,
-            terminate_on_success=True,
-        )
-        sim = SmavNet2D(cfg)
-        result = sim.run(headless=True)
-        if result.success and (result.success_time is not None) and (result.success_time <= max_duration_s):
-            success_times.append(result.success_time)
-    
-    # Calculate cumulative success probability for each second
-    time_points = np.arange(0, max_duration_s + 1, 1)  # Every second
-    success_probs = []
-    
-    for t in time_points:
-        successes_by_t = sum(1 for st in success_times if st <= t)
-        success_probs.append(successes_by_t / float(num_trials))
-    
-    # Plot results
-    plt.figure(figsize=(10, 6))
-    plt.plot(time_points / 60.0, success_probs, linewidth=2)
-    plt.xlabel('Time (minutes)')
-    plt.ylabel('Cumulative Success Probability')
-    plt.title(f'Cumulative Success Probability vs Time (N_MAVs={n_agents}, {num_trials} trials)')
-    plt.grid(True, alpha=0.3)
-    plt.xlim(0, max_duration_s / 60.0)
-    plt.ylim(0, 1.0)
-    plt.tight_layout()
-    
-    out_file = f'success_prob_vs_time_n{n_agents}_trials{num_trials}.png'
-    plt.savefig(out_file, dpi=1000)
-    plt.close()
-    print(f"Saved plot to {out_file}")
-    print(f"Total successes: {len(success_times)}/{num_trials} ({len(success_times)/num_trials:.3f})")
 
 
 def plot_user_distribution_with_coverage(n_agents: int, num_trials: int, duration_s: float,
@@ -309,19 +250,6 @@ def main() -> None:
         angle_deg=angle_deg,
         base_seed=base_seed
     )
-    
-    # Run success probability vs time experiment for a sample swarm size
-    run_success_prob_vs_time_experiment(
-        n_agents=15,
-        num_trials=num_trials*20,
-        max_duration_s=duration_s,
-        area_w=area_w,
-        area_h=area_h,
-        comm_r=comm_r,
-        step_factor=step_factor,
-        angle_deg=angle_deg,
-        base_seed=base_seed
-    )
 
     # Run scalability experiment
     run_scalability_experiment(
@@ -339,7 +267,7 @@ def main() -> None:
     # Run instantaneous success probability experiment for a sample swarm size
     run_instantaneous_success_prob_experiment(
         n_agents=15,
-        num_trials=500,  # Fixed 500 trials per second
+        num_trials=500,  # Fixed 500 trials per 5 seconds
         max_duration_s=duration_s,
         area_w=area_w,
         area_h=area_h,
