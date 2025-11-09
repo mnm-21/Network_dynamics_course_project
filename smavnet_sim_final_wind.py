@@ -1128,7 +1128,9 @@ class _Renderer:
         ax.set_xlim(0, sim.cfg.area_w)
         ax.set_ylim(-50, sim.cfg.area_h)
         ax.set_aspect('equal')
-        
+        ax.grid(True, linestyle='-', linewidth=0.5, alpha=0.3, color='gray', zorder=0)
+        ax.set_axisbelow(True)  
+
         user_hop = sim._min_hop_nodes_to_user()
         title = f"SMAVNET Simulation - t={t:.1f}s"
         if user_hop is not None:
