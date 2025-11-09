@@ -7,6 +7,10 @@ A Python implementation of the Swarm-based Micro Air Vehicle Network (SMAVNET) s
 - **Mayank Chandak** (ME22B224)
 - **Aldis Daniel** (ME22B070)
 
+## Project Resources
+
+📹 **Video Presentation**: [Google Drive Folder](https://drive.google.com/drive/folders/1VV3K935RuiRUUSs-CDf73h-rl1KAuI9G?usp=drive_link) - Contains video presentation and project demonstrations.
+
 ## Overview
 
 SMAVNET is a bio-inspired communication relay system that uses Micro Air Vehicles (MAVs) to establish and maintain communication networks. The system employs ant colony optimization principles where MAVs act as mobile communication nodes, creating a dynamic network that can adapt to changing conditions and user locations.
@@ -30,12 +34,35 @@ This repository contains two implementations:
 - **Configurable Parameters**: Extensive configuration options for simulation parameters
 - **Headless and Visual Modes**: Fast headless simulation for experiments and optional real-time visualization
 
+## File Structure
+
+```
+Network_dynamics_course_project/
+├── smavnet_sim_final.py          # Baseline implementation
+├── smavnet_sim_final_wind.py     # Extended implementation (wind + replacement)
+├── experiments.py                # Baseline experiments
+├── experiments_wind.py           # Wind experiments
+├── requirements.txt              # Python dependencies
+├── README.md                     # This file
+├── pics/                         # Generated plots and figures
+├── Submission2_Network_Dynamics_Course_Project.pdf  # Baseline reproduction report
+├── Submission3_Network_Dynamics_Course_Project.pdf  # Wind improvements (IEEE format)
+└── Ant-based swarming with positionless micro air vehicles for communication relay.pdf
+```
+
+**Project Submissions:**
+- **`Submission2_Network_Dynamics_Course_Project.pdf`**: Report documenting the baseline implementation and reproduction of original paper results using `smavnet_sim_final.py`. Includes scalability analysis, success probability experiments, and validation against the original SMAVNET algorithm.
+- **`Submission3_Network_Dynamics_Course_Project.pdf`**: IEEE-style conference paper describing the wind disturbance model and node replacement mechanism improvements implemented in `smavnet_sim_final_wind.py`. Includes experimental results, drift analysis, and performance evaluation.
+
+See the [Implementation Files](#implementation-files) section for detailed descriptions of each code file.
+
 ## Installation
 
 ### Prerequisites
 
 - Python 3.7 or higher
 - pip (Python package installer)
+- Virtual environment tool (venv or conda)
 
 ### Setup Steps
 
@@ -46,7 +73,30 @@ This repository contains two implementations:
    cd Network_dynamics_course_project
    ```
 
-3. **Install required dependencies**:
+3. **Create a virtual environment** (recommended to isolate dependencies):
+
+   **Option A: Using venv (macOS/Linux/Windows)**
+   ```bash
+   # Create virtual environment
+   python -m venv venv
+   
+   # Activate virtual environment
+   # On macOS/Linux:
+   source venv/bin/activate
+   # On Windows:
+   venv\Scripts\activate
+   ```
+
+   **Option B: Using conda (macOS/Linux/Windows)**
+   ```bash
+   # Create conda environment
+   conda create -n smavnet python=3.9
+   
+   # Activate conda environment
+   conda activate smavnet
+   ```
+
+4. **Install required dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
@@ -56,10 +106,12 @@ This repository contains two implementations:
    - `matplotlib` - For visualization and plotting
    - `tqdm` - For progress bars during long experiments
 
-4. **Verify installation**:
+5. **Verify installation**:
    ```bash
    python -c "import numpy, matplotlib, tqdm; print('All dependencies installed successfully!')"
    ```
+
+**Note**: To deactivate the virtual environment later, run `deactivate` (venv) or `conda deactivate` (conda).
 
 ### Quick Test
 
@@ -503,22 +555,6 @@ cfg = SimulationConfig(
 - **Termination**: Set `terminate_on_success=True` to stop simulation upon first success
 - **Batch Experiments**: Wind experiments can take significant time (500 trials × multiple swarm sizes). Consider running overnight or on a compute cluster for large-scale analysis
 - **Memory**: Long simulations with many agents may require increased memory allocation
-
-## File Structure
-
-```
-Network_dynamics_course_project/
-├── smavnet_sim_final.py          # Baseline implementation
-├── smavnet_sim_final_wind.py     # Extended implementation (wind + replacement)
-├── experiments.py                # Baseline experiments
-├── experiments_wind.py           # Wind experiments
-├── requirements.txt              # Python dependencies
-├── README.md                     # This file
-├── pics/                         # Generated plots and figures
-└── Ant-based swarming with positionless micro air vehicles for communication relay.pdf
-```
-
-See the [Implementation Files](#implementation-files) section for detailed descriptions of each file.
 
 ## Research Context
 
