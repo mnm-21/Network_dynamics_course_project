@@ -29,7 +29,6 @@ This repository contains two implementations:
 - **Wind Robustness** (extended version): Handles environmental disturbances with drift mitigation
 - **Configurable Parameters**: Extensive configuration options for simulation parameters
 - **Headless and Visual Modes**: Fast headless simulation for experiments and optional real-time visualization
-- **Comprehensive Experiments**: Built-in scalability and performance analysis tools
 
 ## Installation
 
@@ -177,12 +176,7 @@ This file contains the baseline SMAVNET 2D implementation that faithfully reprod
 
 ### `smavnet_sim_final_wind.py` - Extended Implementation
 
-This file extends the baseline implementation with wind disturbances and drift mitigation mechanisms, developed as part of the course project. It includes all features from the baseline plus:
-
-- **Wind Disturbance Model**: Time-varying wind field with deterministic and stochastic components
-- **Node Replacement Policy**: Probabilistic replacement mechanism to reduce drift accumulation
-- **Drift Metrics**: Comprehensive tracking of geometric stability
-- **Enhanced Renderer**: Improved visualization with wind arrows and detailed metrics
+Extended implementation with wind disturbances and drift mitigation mechanisms. Includes all baseline features plus wind model, replacement policy, drift metrics, and enhanced visualization. See [Wind Disturbance Model](#wind-disturbance-model) and [Node Replacement Mechanism](#node-replacement-mechanism) for details.
 
 **Use this file when:**
 - Studying robustness to environmental disturbances
@@ -192,18 +186,7 @@ This file extends the baseline implementation with wind disturbances and drift m
 
 ### `experiments_wind.py` - Wind Experiments
 
-This file contains experimental tools specifically designed for analyzing the wind implementation:
-
-- **Replacement Comparison**: Compares drift metrics with and without replacement
-- **Drift Analysis**: Studies effectiveness of replacement events
-- **Scalability Analysis**: Evaluates performance across different swarm sizes
-- **Automated Plot Generation**: Creates timestamped output directories for results
-
-**Use this file when:**
-- Running comprehensive experiments on wind robustness
-- Analyzing drift reduction effectiveness
-- Generating publication-quality plots
-- Comparing replacement strategies
+Experimental tools for analyzing the wind implementation, including replacement comparison, drift analysis, and scalability evaluation. See the [Experiments](#experiments) section for detailed usage.
 
 ## Core Classes
 
@@ -361,36 +344,49 @@ When an agent arrives at an existing node:
 
 ## Experiments
 
-The project includes two experiment files:
+The project includes two experiment files for baseline and wind implementations:
 
-### `experiments.py` - Baseline Experiments
+### Baseline Experiments (`experiments.py`)
 
-Contains experiments for the baseline implementation (reproduction of original paper):
+Run experiments for the baseline implementation:
 
-```python
-from experiments import run_scalability_experiment
-
-# Test success probability vs swarm size
-run_scalability_experiment(
-    swarm_sizes=list(range(5, 21)),
-    num_trials=500,
-    duration_s=1800.0,
-    area_w=800.0,
-    area_h=600.0
-)
+```bash
+python experiments.py
 ```
 
-### `experiments_wind.py` - Wind Experiments
+This generates plots for:
+- Scalability analysis (success probability vs swarm size)
+- Success probability vs time
+- User distribution and coverage
 
-Contains experiments specifically for the wind implementation:
+### Wind Experiments (`experiments_wind.py`)
 
-#### Replacement Comparison
+Run comprehensive experiments for the wind implementation:
 
-Compare drift metrics with and without replacement:
+```bash
+python experiments_wind.py
+```
+
+This will:
+1. Create a timestamped output directory (e.g., `replacement_drift_experiments_20240101_120000/`)
+2. Run replacement comparison experiment (with vs without replacement)
+3. Run drift analysis experiment
+4. Save all plots to the output directory
+
+**Output plots include:**
+- `replacement_comparison_drift.png`: Average drift comparison
+- `replacement_swaps_vs_swarm_size.png`: Number of swaps vs swarm size
+- `replacement_pre_post_drift_n15_trials500.png`: Pre vs post drift scatter
+- `replacement_reduction_vs_pre_drift_n15_trials500.png`: Reduction effectiveness
+- `replacement_reduction_over_time_n15_trials500.png`: Reduction over time
+- `replacement_reduction_vs_age_n15_trials500.png`: Reduction vs node age
+
+**Programmatic Usage:**
 
 ```python
-from experiments_wind import run_replacement_comparison_experiment
+from experiments_wind import run_replacement_comparison_experiment, run_drift_vs_replacement_experiment
 
+# Compare drift with and without replacement
 run_replacement_comparison_experiment(
     swarm_sizes=list(range(5, 21)),
     num_trials=500,
@@ -400,19 +396,8 @@ run_replacement_comparison_experiment(
     wind_speed=2.0,
     output_dir="./results"
 )
-```
 
-This generates:
-- Average drift comparison plot (with vs without replacement)
-- Number of swaps vs swarm size plot
-
-#### Drift Analysis
-
-Analyze replacement effectiveness:
-
-```python
-from experiments_wind import run_drift_vs_replacement_experiment
-
+# Analyze replacement effectiveness
 run_drift_vs_replacement_experiment(
     n_agents=15,
     num_trials=500,
@@ -421,24 +406,6 @@ run_drift_vs_replacement_experiment(
     output_dir="./results"
 )
 ```
-
-This generates:
-- Pre vs post drift scatter plot
-- Drift reduction vs pre-swap drift
-- Drift reduction over time
-- Drift reduction vs node age
-
-#### Running All Wind Experiments
-
-```bash
-python experiments_wind.py
-```
-
-This will:
-1. Create a timestamped output directory
-2. Run replacement comparison experiment
-3. Run drift analysis experiment
-4. Save all plots to the output directory
 
 ## Configuration Examples
 
@@ -530,43 +497,6 @@ cfg = SimulationConfig(
 )
 ```
 
-## Running Experiments
-
-### Baseline Experiments
-
-Run experiments for the baseline implementation:
-
-```bash
-python experiments.py
-```
-
-This will generate plots for:
-- Scalability analysis (success probability vs swarm size)
-- Success probability vs time
-- User distribution and coverage
-
-### Wind Experiments
-
-Run experiments for the wind implementation:
-
-```bash
-python experiments_wind.py
-```
-
-This will:
-1. Create a timestamped output directory (e.g., `replacement_drift_experiments_20240101_120000/`)
-2. Run replacement comparison experiment (with vs without replacement)
-3. Run drift analysis experiment
-4. Save all plots to the output directory
-
-Output plots include:
-- `replacement_comparison_drift.png`: Average drift comparison
-- `replacement_swaps_vs_swarm_size.png`: Number of swaps vs swarm size
-- `replacement_pre_post_drift_n15_trials500.png`: Pre vs post drift scatter
-- `replacement_reduction_vs_pre_drift_n15_trials500.png`: Reduction effectiveness
-- `replacement_reduction_over_time_n15_trials500.png`: Reduction over time
-- `replacement_reduction_vs_age_n15_trials500.png`: Reduction vs node age
-
 ## Performance Considerations
 
 - **Headless Mode**: Use `headless=True` for maximum performance in experiments
@@ -578,29 +508,17 @@ Output plots include:
 
 ```
 Network_dynamics_course_project/
-├── smavnet_sim_final.py          # Baseline implementation (original algorithm reproduction)
-├── smavnet_sim_final_wind.py     # Extended implementation (wind + replacement mechanism)
-├── experiments.py                # Baseline experiments (scalability, success probability)
-├── experiments_wind.py           # Wind experiments (drift analysis, replacement comparison)
+├── smavnet_sim_final.py          # Baseline implementation
+├── smavnet_sim_final_wind.py     # Extended implementation (wind + replacement)
+├── experiments.py                # Baseline experiments
+├── experiments_wind.py           # Wind experiments
 ├── requirements.txt              # Python dependencies
 ├── README.md                     # This file
 ├── pics/                         # Generated plots and figures
 └── Ant-based swarming with positionless micro air vehicles for communication relay.pdf
 ```
 
-### File Descriptions
-
-- **`smavnet_sim_final.py`**: Baseline SMAVNET 2D implementation reproducing the original algorithm. Use for baseline comparisons and understanding core behavior.
-
-- **`smavnet_sim_final_wind.py`**: Extended implementation with wind disturbances and drift mitigation. Includes all baseline features plus wind model, replacement mechanism, and drift metrics.
-
-- **`experiments.py`**: Experimental tools for baseline implementation. Includes scalability analysis, success probability vs time, and user distribution visualization.
-
-- **`experiments_wind.py`**: Experimental tools for wind implementation. Includes replacement comparison, drift analysis, and automated plot generation with timestamped output directories.
-
-- **`requirements.txt`**: Python package dependencies (numpy, matplotlib, tqdm).
-
-- **`pics/`**: Directory containing generated plots and figures from experiments.
+See the [Implementation Files](#implementation-files) section for detailed descriptions of each file.
 
 ## Research Context
 
